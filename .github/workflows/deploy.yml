@@ -22,12 +22,14 @@ on:
 
 env:
   NODE_VERSION: '22'
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -47,6 +49,7 @@ jobs:
           else
             echo "stage=dev" >> $GITHUB_OUTPUT
           fi
+          echo "Deploying to stage: $(cat $GITHUB_OUTPUT | grep stage | cut -d= -f2)"
 
       - name: Install root dependencies
         run: npm install
@@ -66,6 +69,18 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
 
+      - name: Check secrets
+        run: |
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+            echo "ERROR: AWS_ACCESS_KEY_ID is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.SUPABASE_URL }}" ]; then
+            echo "ERROR: SUPABASE_URL is not set"
+            exit 1
+          fi
+          echo "All required secrets are configured"
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -81,5 +96,4 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
       - name: Output URLs
-        run: |
-          echo "Deployment complete for stage: ${{ steps.stage.outputs.stage }}"
+        run: echo "Deployment complete for stage ${{ steps.stage.outputs.stage }}"

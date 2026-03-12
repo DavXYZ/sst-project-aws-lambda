@@ -24,11 +24,14 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
+    environment: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.stage || github.ref == 'refs/heads/main' && 'production' || 'dev' }}
     concurrency:
-      group: sstproject-deploy
+      group: sstproject-deploy-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.stage || github.ref == 'refs/heads/main' && 'production' || 'dev' }}
       cancel-in-progress: false
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      STAGE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.stage || github.ref == 'refs/heads/main' && 'production' || 'dev' }}
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -46,14 +49,7 @@ jobs:
       - name: Determine stage
         id: stage
         run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            STAGE="${{ github.event.inputs.stage }}"
-          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            STAGE="production"
-          else
-            STAGE="dev"
-          fi
-          echo "stage=$STAGE" >> $GITHUB_OUTPUT
+          echo "stage=$STAGE" >> "$GITHUB_OUTPUT"
           echo "Deploying to stage: $STAGE"
 
       - name: Install root dependencies
@@ -79,7 +75,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Clear stale SST lock
         shell: bash
@@ -100,15 +96,21 @@ jobs:
 
           echo "Starting SST deploy for stage '${{ steps.stage.outputs.stage }}'"
 
-          if npx sst deploy --stage "${{ steps.stage.outputs.stage }}" 2>&1 | tee "$LOG_FILE"; then
+          if npx sst deploy --stage "${{ steps.stage.outputs.stage }}" --print-logs 2>&1 | tee "$LOG_FILE"; then
             echo "SST deploy completed successfully"
             exit 0
+          fi
+
+          if [ -f .sst/log/sst.log ]; then
+            echo "----- .sst/log/sst.log -----"
+            cat .sst/log/sst.log
+            echo "----- end .sst/log/sst.log -----"
           fi
 
           if grep -q "A concurrent update was detected on the app" "$LOG_FILE"; then
             echo "Detected stale SST lock. Unlocking stage '${{ steps.stage.outputs.stage }}' and retrying once..."
             npx sst unlock --stage "${{ steps.stage.outputs.stage }}"
-            npx sst deploy --stage "${{ steps.stage.outputs.stage }}"
+            npx sst deploy --stage "${{ steps.stage.outputs.stage }}" --print-logs
             exit 0
           fi
 

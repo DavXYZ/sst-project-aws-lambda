@@ -5,9 +5,6 @@ on:
     branches:
       - main
       - develop
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       stage:
@@ -39,47 +36,73 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      - name: Show Node and npm versions
+        run: |
+          node --version
+          npm --version
+
       - name: Determine stage
         id: stage
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "stage=${{ github.event.inputs.stage }}" >> $GITHUB_OUTPUT
+            STAGE="${{ github.event.inputs.stage }}"
           elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            echo "stage=production" >> $GITHUB_OUTPUT
+            STAGE="production"
           else
-            echo "stage=dev" >> $GITHUB_OUTPUT
+            STAGE="dev"
           fi
-          echo "Deploying to stage: $(cat $GITHUB_OUTPUT | grep stage | cut -d= -f2)"
+          echo "stage=$STAGE" >> $GITHUB_OUTPUT
+          echo "Deploying to stage: $STAGE"
 
       - name: Install root dependencies
-        run: npm install
+        run: |
+          echo "Installing root dependencies..."
+          npm install
+          echo "Root dependencies installed successfully"
 
       - name: Install web dependencies
-        run: npm install
         working-directory: web
+        run: |
+          echo "Installing web dependencies..."
+          npm install
+          echo "Web dependencies installed successfully"
 
       - name: Build backend
-        run: npm run build
+        run: |
+          echo "Building backend..."
+          npm run build
+          echo "Backend built successfully"
 
       - name: Build frontend
-        run: npm run build
         working-directory: web
+        run: |
+          echo "Building frontend..."
+          npm run build
+          echo "Frontend built successfully"
         env:
           VITE_API_URL: https://placeholder.execute-api.us-east-1.amazonaws.com
           VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
 
-      - name: Check secrets
+      - name: Verify secrets are set
         run: |
-          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
-            echo "ERROR: AWS_ACCESS_KEY_ID is not set"
+          echo "Checking if secrets are configured..."
+          if [ -z "$AWS_KEY" ]; then
+            echo "ERROR: AWS_ACCESS_KEY_ID secret is empty or not set!"
             exit 1
+          else
+            echo "AWS_ACCESS_KEY_ID is set (length: ${#AWS_KEY})"
           fi
-          if [ -z "${{ secrets.SUPABASE_URL }}" ]; then
-            echo "ERROR: SUPABASE_URL is not set"
+          if [ -z "$SUPA_URL" ]; then
+            echo "ERROR: SUPABASE_URL secret is empty or not set!"
             exit 1
+          else
+            echo "SUPABASE_URL is set"
           fi
-          echo "All required secrets are configured"
+          echo "All secrets verified!"
+        env:
+          AWS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          SUPA_URL: ${{ secrets.SUPABASE_URL }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -88,12 +111,18 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
+      - name: Verify AWS credentials
+        run: |
+          echo "Verifying AWS credentials..."
+          aws sts get-caller-identity
+          echo "AWS credentials verified!"
+
       - name: Deploy to ${{ steps.stage.outputs.stage }}
-        run: npx sst deploy --stage ${{ steps.stage.outputs.stage }}
+        run: |
+          echo "Starting SST deployment to ${{ steps.stage.outputs.stage }}..."
+          npx sst deploy --stage ${{ steps.stage.outputs.stage }}
+          echo "Deployment complete!"
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-
-      - name: Output URLs
-        run: echo "Deployment complete for stage ${{ steps.stage.outputs.stage }}"

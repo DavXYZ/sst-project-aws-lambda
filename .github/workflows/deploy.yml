@@ -24,6 +24,9 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
+    concurrency:
+      group: sstproject-deploy
+      cancel-in-progress: false
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -77,7 +80,27 @@ jobs:
           aws-region: us-east-1
 
       - name: Deploy to ${{ steps.stage.outputs.stage }}
-        run: npx sst deploy --stage ${{ steps.stage.outputs.stage }}
+        shell: bash
+        run: |
+          set -o pipefail
+          LOG_FILE="$(mktemp)"
+
+          echo "Starting SST deploy for stage '${{ steps.stage.outputs.stage }}'"
+
+          if npx sst deploy --stage "${{ steps.stage.outputs.stage }}" 2>&1 | tee "$LOG_FILE"; then
+            echo "SST deploy completed successfully"
+            exit 0
+          fi
+
+          if grep -q "A concurrent update was detected on the app" "$LOG_FILE"; then
+            echo "Detected stale SST lock. Unlocking stage '${{ steps.stage.outputs.stage }}' and retrying once..."
+            npx sst unlock --stage "${{ steps.stage.outputs.stage }}"
+            npx sst deploy --stage "${{ steps.stage.outputs.stage }}"
+            exit 0
+          fi
+
+          echo "SST deploy failed for a reason other than a lock. See log above."
+          exit 1
         env:
           SST_LOG: debug
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}

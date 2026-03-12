@@ -77,10 +77,20 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Prepare SST log files
+        shell: bash
+        run: |
+          mkdir -p .sst/log
+          : > .sst/log/pulumi.log
+          : > .sst/log/sst.log
+          ls -la .sst/log
+
       - name: Clear stale SST lock
         shell: bash
         run: |
           echo "Attempting to clear any stale SST lock for stage '${{ steps.stage.outputs.stage }}'..."
+          mkdir -p .sst/log
+          : > .sst/log/pulumi.log
           npx sst unlock --stage "${{ steps.stage.outputs.stage }}" || true
         env:
           SST_LOG: debug
@@ -95,16 +105,26 @@ jobs:
           LOG_FILE="$(mktemp)"
 
           echo "Starting SST deploy for stage '${{ steps.stage.outputs.stage }}'"
+          mkdir -p .sst/log
+          : > .sst/log/pulumi.log
+          : > .sst/log/sst.log
 
           if npx sst deploy --stage "${{ steps.stage.outputs.stage }}" --print-logs 2>&1 | tee "$LOG_FILE"; then
             echo "SST deploy completed successfully"
             exit 0
           fi
 
-          if [ -f .sst/log/sst.log ]; then
-            echo "----- .sst/log/sst.log -----"
-            cat .sst/log/sst.log
-            echo "----- end .sst/log/sst.log -----"
+          if [ -d .sst/log ]; then
+            echo "----- .sst/log contents -----"
+            ls -la .sst/log
+            echo "----- end .sst/log contents -----"
+
+            shopt -s nullglob
+            for file in .sst/log/*.log; do
+              echo "----- $file -----"
+              cat "$file"
+              echo "----- end $file -----"
+            done
           fi
 
           if grep -q "A concurrent update was detected on the app" "$LOG_FILE"; then

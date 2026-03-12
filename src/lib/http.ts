@@ -1,4 +1,6 @@
 import type { APIGatewayProxyStructuredResultV2 } from "aws-lambda";
+import { UnauthorizedError } from "./auth";
+import { MissingSupabaseConfigError } from "./supabase";
 
 const JSON_HEADERS = {
   "content-type": "application/json; charset=utf-8",
@@ -20,3 +22,21 @@ export function noContent(): APIGatewayProxyStructuredResultV2 {
     statusCode: 204,
   };
 }
+
+export function handleRouteError(
+  error: unknown,
+  fallbackMessage: string,
+): APIGatewayProxyStructuredResultV2 {
+  if (error instanceof UnauthorizedError) {
+    return json(401, { error: "Unauthorized" });
+  }
+
+  if (error instanceof MissingSupabaseConfigError) {
+    console.error("Missing Supabase runtime configuration", error);
+    return json(500, { error: "Server configuration error" });
+  }
+
+  console.error("Unhandled route error", error);
+  return json(500, { error: fallbackMessage });
+}
+

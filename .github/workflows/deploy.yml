@@ -17,16 +17,10 @@ on:
           - staging
           - production
 
-env:
-  NODE_VERSION: '22'
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-
 jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -34,7 +28,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: 'lts/*'
 
       - name: Show Node and npm versions
         run: |
@@ -55,54 +49,22 @@ jobs:
           echo "Deploying to stage: $STAGE"
 
       - name: Install root dependencies
-        run: |
-          echo "Installing root dependencies..."
-          npm install
-          echo "Root dependencies installed successfully"
+        run: npm install
 
       - name: Install web dependencies
         working-directory: web
-        run: |
-          echo "Installing web dependencies..."
-          npm install
-          echo "Web dependencies installed successfully"
+        run: npm install
 
       - name: Build backend
-        run: |
-          echo "Building backend..."
-          npm run build
-          echo "Backend built successfully"
+        run: npm run build
 
       - name: Build frontend
         working-directory: web
-        run: |
-          echo "Building frontend..."
-          npm run build
-          echo "Frontend built successfully"
+        run: npm run build
         env:
           VITE_API_URL: https://placeholder.execute-api.us-east-1.amazonaws.com
           VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-
-      - name: Verify secrets are set
-        run: |
-          echo "Checking if secrets are configured..."
-          if [ -z "$AWS_KEY" ]; then
-            echo "ERROR: AWS_ACCESS_KEY_ID secret is empty or not set!"
-            exit 1
-          else
-            echo "AWS_ACCESS_KEY_ID is set (length: ${#AWS_KEY})"
-          fi
-          if [ -z "$SUPA_URL" ]; then
-            echo "ERROR: SUPABASE_URL secret is empty or not set!"
-            exit 1
-          else
-            echo "SUPABASE_URL is set"
-          fi
-          echo "All secrets verified!"
-        env:
-          AWS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          SUPA_URL: ${{ secrets.SUPABASE_URL }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -111,17 +73,8 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Verify AWS credentials
-        run: |
-          echo "Verifying AWS credentials..."
-          aws sts get-caller-identity
-          echo "AWS credentials verified!"
-
       - name: Deploy to ${{ steps.stage.outputs.stage }}
-        run: |
-          echo "Starting SST deployment to ${{ steps.stage.outputs.stage }}..."
-          npx sst deploy --stage ${{ steps.stage.outputs.stage }}
-          echo "Deployment complete!"
+        run: npx sst deploy --stage ${{ steps.stage.outputs.stage }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}

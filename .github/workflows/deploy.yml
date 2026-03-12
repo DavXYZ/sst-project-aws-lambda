@@ -27,6 +27,8 @@ jobs:
     concurrency:
       group: sstproject-deploy
       cancel-in-progress: false
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -78,6 +80,17 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
+
+      - name: Clear stale SST lock
+        shell: bash
+        run: |
+          echo "Attempting to clear any stale SST lock for stage '${{ steps.stage.outputs.stage }}'..."
+          npx sst unlock --stage "${{ steps.stage.outputs.stage }}" || true
+        env:
+          SST_LOG: debug
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
       - name: Deploy to ${{ steps.stage.outputs.stage }}
         shell: bash

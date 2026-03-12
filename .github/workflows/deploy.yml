@@ -36,13 +36,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
 
       - name: Install root dependencies
-        run: npm ci
+        run: npm install
 
       - name: Install web dependencies
-        run: npm ci
+        run: npm install
         working-directory: web
 
       - name: Build backend
@@ -52,7 +51,7 @@ jobs:
         run: npm run build
         working-directory: web
         env:
-          VITE_API_URL: https://eldj50bthb.execute-api.us-east-1.amazonaws.com
+          VITE_API_URL: https://placeholder.execute-api.us-east-1.amazonaws.com
           VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
 
@@ -73,13 +72,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
 
       - name: Install root dependencies
-        run: npm ci
+        run: npm install
 
       - name: Install web dependencies
-        run: npm ci
+        run: npm install
         working-directory: web
 
       - name: Configure AWS credentials
@@ -113,13 +111,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
 
       - name: Install root dependencies
-        run: npm ci
+        run: npm install
 
       - name: Install web dependencies
-        run: npm ci
+        run: npm install
         working-directory: web
 
       - name: Configure AWS credentials
@@ -153,13 +150,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
 
       - name: Install root dependencies
-        run: npm ci
+        run: npm install
 
       - name: Install web dependencies
-        run: npm ci
+        run: npm install
         working-directory: web
 
       - name: Configure AWS credentials

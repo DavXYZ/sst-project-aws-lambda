@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CopilotDiffPersistence">
+    <option name="pendingDiffs">
+      <map>
+        <entry key="$PROJECT_DIR$/.github/workflows/test.yml">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/.github/workflows/test.yml" />
+              <option name="updatedContent" value="name: Test Workflow&#10;&#10;on:&#10;  push:&#10;    branches:&#10;      - develop&#10;  workflow_dispatch:&#10;&#10;jobs:&#10;  test:&#10;    name: Test Job&#10;    runs-on: ubuntu-latest&#10;    steps:&#10;      - name: Print hello&#10;        run: echo &quot;Hello from GitHub Actions!&quot;&#10;&#10;      - name: Print environment&#10;        run: |&#10;          echo &quot;GitHub ref: ${{ github.ref }}&quot;&#10;          echo &quot;GitHub event: ${{ github.event_name }}&quot;&#10;&#10;      - name: Test secrets exist&#10;        run: |&#10;          echo &quot;Testing if secrets are accessible...&quot;&#10;          if [ -n &quot;$TEST_SECRET&quot; ]; then&#10;            echo &quot;AWS_ACCESS_KEY_ID exists (length: ${#TEST_SECRET})&quot;&#10;          else&#10;            echo &quot;AWS_ACCESS_KEY_ID is NOT set&quot;&#10;          fi&#10;        env:&#10;          TEST_SECRET: ${{ secrets.AWS_ACCESS_KEY_ID }}&#10;&#10;      - name: Success&#10;        run: echo &quot;All tests passed!&quot;&#10;" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>

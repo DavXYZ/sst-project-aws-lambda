@@ -51,7 +51,7 @@ jobs:
         run: npm run build
         working-directory: web
         env:
-          VITE_API_URL: https://placeholder.execute-api.us-east-1.amazonaws.com
+          VITE_API_URL: https://eldj50bthb.execute-api.us-east-1.amazonaws.com
           VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
 

@@ -1,0 +1,24 @@
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: #f6f7fb;
+  color: #111827;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+p {
+  margin: 0.35rem 0;
+}
+
+h1,
+h2 {
+  margin-top: 0;
+}
+
+button,
+input {
+  font-family: inherit;
+}

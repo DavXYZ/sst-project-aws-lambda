@@ -1,0 +1,19 @@
+{
+  "name": "sstproject",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.4",
+    "sst": "4.2.7"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "8.10.161",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.5.3"
+  },
+  "private": true
+}

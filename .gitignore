@@ -1,0 +1,26 @@
+/tmp
+/out-tsc
+
+/node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+/.pnp
+.pnp.js
+
+.vscode/*
+
+# sst
+.sst
+
+# Build outputs
+dist/
+web/dist/
+
+# Environment variables (never commit credentials!)
+.env
+.env.local
+.env.*.local
+web/.env
+web/.env.local
+

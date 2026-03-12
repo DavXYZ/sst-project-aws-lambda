@@ -1,0 +1,41 @@
+@baseUrl = https://eldj50bthb.execute-api.us-east-1.amazonaws.com
+@itemId = d5a2e7f5-cddb-4b2c-b1b3-79ff058fde5e
+@accessToken = REPLACE_WITH_SUPABASE_ACCESS_TOKEN
+
+### Create item
+POST {{baseUrl}}/items
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "name": "Item from JetBrains HTTP client 222",
+  "description": "created via test.http 222"
+}
+
+###
+### Get all items
+GET {{baseUrl}}/items
+Authorization: Bearer {{accessToken}}
+
+###
+### Get item by id
+GET {{baseUrl}}/items/{{itemId}}
+Authorization: Bearer {{accessToken}}
+
+###
+### Update item by id
+PUT {{baseUrl}}/items/{{itemId}}
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "name": "Updated item name",
+  "description": "updated via test.http"
+}
+
+###
+### Delete item by id
+DELETE {{baseUrl}}/items/{{itemId}}
+Authorization: Bearer {{accessToken}}
+
+###

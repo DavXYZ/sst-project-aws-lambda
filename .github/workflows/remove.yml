@@ -1,0 +1,49 @@
+name: Remove SST Stack
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: 'Stage to remove'
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+      confirm:
+        description: 'Type "REMOVE" to confirm deletion'
+        required: true
+
+jobs:
+  remove:
+    name: Remove Stack
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'REMOVE'
+    environment: ${{ github.event.inputs.stage }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+
+      - name: Remove stack
+        run: npx sst remove --stage ${{ github.event.inputs.stage }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+

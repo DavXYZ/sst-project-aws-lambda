@@ -6,6 +6,14 @@ export type Item = {
   updated_at: string;
 };
 
+export type SubscriptionStatus = {
+  subscribed: boolean;
+  status: string | null;
+  priceId: string | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+};
+
 const baseUrl = import.meta.env.VITE_API_URL;
 
 if (!baseUrl) {
@@ -76,6 +84,28 @@ export async function updateItem(
 export async function deleteItem(accessToken: string, id: string) {
   return request<void>(`/items/${id}`, accessToken, {
     method: "DELETE",
+  });
+}
+
+export async function getSubscriptionStatus(accessToken: string) {
+  return request<SubscriptionStatus>("/subscriptions/status", accessToken);
+}
+
+export async function createCheckoutSession(accessToken: string) {
+  return request<{ url: string; sessionId: string }>(
+    "/subscriptions/create-checkout",
+    accessToken,
+    {
+      method: "POST",
+      body: JSON.stringify({}),
+    },
+  );
+}
+
+export async function createBillingPortalSession(accessToken: string) {
+  return request<{ url: string }>("/subscriptions/portal", accessToken, {
+    method: "POST",
+    body: JSON.stringify({}),
   });
 }
 

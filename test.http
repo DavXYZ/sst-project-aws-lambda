@@ -39,3 +39,25 @@ DELETE {{baseUrl}}/items/{{itemId}}
 Authorization: Bearer {{accessToken}}
 
 ###
+
+### Subscription status
+GET {{baseUrl}}/subscriptions/status
+Authorization: Bearer {{accessToken}}
+
+###
+### Start Stripe checkout
+POST {{baseUrl}}/subscriptions/create-checkout
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{}
+
+###
+### Open Stripe billing portal
+POST {{baseUrl}}/subscriptions/portal
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{}
+
+###

@@ -40,6 +40,12 @@ This project includes:
 - `PUT /items/{id}`
 - `DELETE /items/{id}`
 
+Subscription endpoints:
+- `POST /subscriptions/create-checkout`
+- `POST /subscriptions/portal`
+- `GET /subscriptions/status`
+- `POST /webhooks/stripe` (no authorizer; Stripe webhook)
+
 All endpoints require `Authorization: Bearer <supabase_access_token>`.
 
 The Lambda authorizer (`src/authorizer.ts`) validates the token and passes user context (`userId`, `userEmail`) to the route handlers.
@@ -52,6 +58,10 @@ Create `.env` in the project root:
 SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 SUPABASE_ANON_KEY=YOUR_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PRICE_ID=price_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PUBLISHABLE_KEY=pk_test_...
 ```
 
 ## Supabase Table Setup

@@ -13,10 +13,19 @@ export default $config({
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
     const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const stripePriceId = process.env.STRIPE_PRICE_ID;
 
-    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
+    if (
+      !supabaseUrl ||
+      !supabaseAnonKey ||
+      !supabaseServiceRoleKey ||
+      !stripeSecretKey ||
+      !stripePriceId
+    ) {
       throw new Error(
-        "SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY must be set",
+        "SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, STRIPE_SECRET_KEY, and STRIPE_PRICE_ID must be set",
       );
     }
 
@@ -48,6 +57,8 @@ export default $config({
       environment: {
         SUPABASE_URL: supabaseUrl,
         SUPABASE_SERVICE_ROLE_KEY: supabaseServiceRoleKey,
+        STRIPE_SECRET_KEY: stripeSecretKey,
+        STRIPE_PRICE_ID: stripePriceId,
       },
     };
 
@@ -76,6 +87,31 @@ export default $config({
       ...functionEnv,
     }, routeArgs);
 
+    api.route("POST /subscriptions/create-checkout", {
+      handler: "src/lambdas/stripe/createCheckout.handler",
+      ...functionEnv,
+    }, routeArgs);
+
+    api.route("POST /subscriptions/portal", {
+      handler: "src/lambdas/stripe/createPortal.handler",
+      ...functionEnv,
+    }, routeArgs);
+
+    api.route("GET /subscriptions/status", {
+      handler: "src/lambdas/stripe/getSubscriptionStatus.handler",
+      ...functionEnv,
+    }, routeArgs);
+
+    api.route("POST /webhooks/stripe", {
+      handler: "src/lambdas/stripe/webhook.handler",
+      environment: {
+        SUPABASE_URL: supabaseUrl,
+        SUPABASE_SERVICE_ROLE_KEY: supabaseServiceRoleKey,
+        STRIPE_SECRET_KEY: stripeSecretKey,
+        STRIPE_WEBHOOK_SECRET: stripeWebhookSecret ?? "",
+      },
+    });
+
     const web = new sst.aws.StaticSite("web", {
       path: "web",
       build: {
@@ -90,6 +126,7 @@ export default $config({
         VITE_API_URL: api.url,
         VITE_SUPABASE_URL: supabaseUrl,
         VITE_SUPABASE_ANON_KEY: supabaseAnonKey,
+        VITE_STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY ?? "",
       },
     });
 

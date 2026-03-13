@@ -86,6 +86,13 @@ export function handleRouteError(
     });
   }
 
+  if (hasErrorName(error, "MissingStripeConfigError")) {
+    return errorJson(500, "Server configuration error", {
+      details: error.message,
+      requestId,
+    });
+  }
+
   if (error instanceof Error) {
     console.error("Unhandled route error:", error);
     return errorJson(500, fallbackMessage, {

@@ -2,14 +2,23 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import type { Session } from "@supabase/supabase-js";
 import "./App.css";
-import { createItem, deleteItem, getItems, updateItem } from "./lib/api";
-import type { Item } from "./lib/api";
+import {
+  createBillingPortalSession,
+  createCheckoutSession,
+  createItem,
+  deleteItem,
+  getItems,
+  getSubscriptionStatus,
+  updateItem,
+} from "./lib/api";
+import type { Item, SubscriptionStatus } from "./lib/api";
 import { supabase } from "./lib/supabase";
 import { AuthCard } from "./components/AuthCard";
 import { CreateItemCard } from "./components/CreateItemCard";
 import { ItemsCard } from "./components/ItemsCard";
 import { LoadingState } from "./components/LoadingState";
 import { StatusBanner } from "./components/StatusBanner";
+import { SubscriptionCard } from "./components/SubscriptionCard";
 import { UserBar } from "./components/UserBar";
 
 function App() {
@@ -20,14 +29,18 @@ function App() {
   const [newName, setNewName] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [items, setItems] = useState<Item[]>([]);
+  const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   const [loadingItems, setLoadingItems] = useState(false);
+  const [loadingSubscription, setLoadingSubscription] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [itemBusy, setItemBusy] = useState(false);
+  const [billingBusy, setBillingBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   const accessToken = session?.access_token;
   const userEmail = useMemo(() => session?.user.email ?? "", [session]);
+  const hasActiveSubscription = Boolean(subscription?.subscribed);
 
   useEffect(() => {
     let mounted = true;
@@ -53,10 +66,12 @@ function App() {
   useEffect(() => {
     if (!accessToken) {
       setItems([]);
+      setSubscription(null);
       return;
     }
 
     void loadItems(accessToken);
+    void loadSubscription(accessToken);
   }, [accessToken]);
 
   async function loadItems(token: string) {
@@ -69,6 +84,19 @@ function App() {
       setError(err instanceof Error ? err.message : "Failed to fetch items");
     } finally {
       setLoadingItems(false);
+    }
+  }
+
+  async function loadSubscription(token: string) {
+    setLoadingSubscription(true);
+    setError("");
+    try {
+      const result = await getSubscriptionStatus(token);
+      setSubscription(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load subscription");
+    } finally {
+      setLoadingSubscription(false);
     }
   }
 
@@ -130,6 +158,10 @@ function App() {
   async function handleCreateItem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!accessToken) return;
+    if (!hasActiveSubscription) {
+      setError("An active subscription is required to create items.");
+      return;
+    }
 
     setItemBusy(true);
     setMessage("");
@@ -149,6 +181,10 @@ function App() {
 
   async function handleUpdateItem(item: Item) {
     if (!accessToken) return;
+    if (!hasActiveSubscription) {
+      setError("An active subscription is required to update items.");
+      return;
+    }
 
     const nextName = window.prompt("New name", item.name);
     if (nextName === null) return;
@@ -172,6 +208,10 @@ function App() {
 
   async function handleDeleteItem(id: string) {
     if (!accessToken) return;
+    if (!hasActiveSubscription) {
+      setError("An active subscription is required to delete items.");
+      return;
+    }
     if (!window.confirm("Delete this item?")) return;
 
     setItemBusy(true);
@@ -185,6 +225,38 @@ function App() {
       setError(err instanceof Error ? err.message : "Failed to delete item");
     } finally {
       setItemBusy(false);
+    }
+  }
+
+  async function handleStartSubscription() {
+    if (!accessToken) return;
+
+    setBillingBusy(true);
+    setMessage("");
+    setError("");
+    try {
+      const result = await createCheckoutSession(accessToken);
+      window.location.assign(result.url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to start subscription checkout");
+    } finally {
+      setBillingBusy(false);
+    }
+  }
+
+  async function handleManageBilling() {
+    if (!accessToken) return;
+
+    setBillingBusy(true);
+    setMessage("");
+    setError("");
+    try {
+      const result = await createBillingPortalSession(accessToken);
+      window.location.assign(result.url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to open billing portal");
+    } finally {
+      setBillingBusy(false);
     }
   }
 
@@ -224,10 +296,25 @@ function App() {
         ) : (
           <>
             <UserBar email={userEmail} onLogout={() => void handleSignOut()} busy={authBusy} />
+            <SubscriptionCard
+              subscription={subscription}
+              loading={loadingSubscription}
+              busy={billingBusy}
+              onRefresh={() => {
+                if (accessToken) void loadSubscription(accessToken);
+              }}
+              onStartSubscription={() => {
+                void handleStartSubscription();
+              }}
+              onManageBilling={() => {
+                void handleManageBilling();
+              }}
+            />
             <CreateItemCard
               name={newName}
               description={newDescription}
               busy={itemBusy}
+              disabled={!hasActiveSubscription}
               onNameChange={setNewName}
               onDescriptionChange={setNewDescription}
               onCreate={handleCreateItem}
@@ -236,6 +323,7 @@ function App() {
               items={items}
               loading={loadingItems}
               busy={itemBusy}
+              mutationsDisabled={!hasActiveSubscription}
               onRefresh={() => {
                 if (accessToken) void loadItems(accessToken);
               }}

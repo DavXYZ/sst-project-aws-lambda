@@ -59,17 +59,6 @@ jobs:
         working-directory: web
         run: npm install
 
-      - name: Build backend
-        run: npm run build
-
-      - name: Build frontend
-        working-directory: web
-        run: npm run build
-        env:
-          VITE_API_URL: https://placeholder.execute-api.us-east-1.amazonaws.com
-          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v5
         with:
@@ -77,26 +66,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Prepare SST log files
-        shell: bash
-        run: |
-          mkdir -p .sst/log
-          : > .sst/log/pulumi.log
-          : > .sst/log/sst.log
-          ls -la .sst/log
-
-      - name: Clear stale SST lock
-        shell: bash
-        run: |
-          echo "Attempting to clear any stale SST lock for stage '${{ steps.stage.outputs.stage }}'..."
-          mkdir -p .sst/log
-          : > .sst/log/pulumi.log
-          npx sst unlock --stage "${{ steps.stage.outputs.stage }}" || true
-        env:
-          SST_LOG: debug
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
       - name: Deploy to ${{ steps.stage.outputs.stage }}
         shell: bash
@@ -141,3 +110,5 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}

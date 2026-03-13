@@ -1,12 +1,14 @@
 import type { APIGatewayProxyResultV2 } from "aws-lambda";
 import { getAuthUser } from "../lib/auth";
 import type { AuthorizedEvent } from "../lib/auth";
-import { handleRouteError, json } from "../lib/http";
+import { errorJson, handleRouteError, json } from "../lib/http";
 import { getSupabaseClient } from "../lib/supabase";
 
 export const handler = async (
   event: AuthorizedEvent
 ): Promise<APIGatewayProxyResultV2> => {
+  const requestId = event.requestContext.requestId;
+
   try {
     const user = getAuthUser(event);
     console.log("Create item by user:", user.userId);
@@ -16,11 +18,17 @@ export const handler = async (
     try {
       body = JSON.parse(event.body || "{}");
     } catch {
-      return json(400, { error: "Invalid JSON body" });
+      return errorJson(400, "Invalid JSON body", {
+        details: "Request body must be valid JSON",
+        requestId,
+      });
     }
 
     if (!body.name?.trim()) {
-      return json(400, { error: "name is required" });
+      return errorJson(400, "name is required", {
+        details: "Provide a non-empty 'name' field",
+        requestId,
+      });
     }
 
     const supabase = getSupabaseClient();
@@ -35,12 +43,15 @@ export const handler = async (
 
     if (error) {
       console.error("Supabase insert error", error);
-      return json(500, { error: "Failed to create item" });
+      return errorJson(500, "Failed to create item", {
+        details: `${error.code ?? "DB_ERROR"}: ${error.message}`,
+        requestId,
+      });
     }
 
     return json(201, data);
   } catch (error) {
-    return handleRouteError(error, "Failed to create item");
+    return handleRouteError(error, "Failed to create item", requestId);
   }
 };
 

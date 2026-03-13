@@ -1,12 +1,14 @@
 import type { APIGatewayProxyResultV2 } from "aws-lambda";
 import { getAuthUser } from "../lib/auth";
 import type { AuthorizedEvent } from "../lib/auth";
-import { handleRouteError, json, noContent } from "../lib/http";
+import { errorJson, handleRouteError, noContent } from "../lib/http";
 import { getSupabaseClient } from "../lib/supabase";
 
 export const handler = async (
   event: AuthorizedEvent
 ): Promise<APIGatewayProxyResultV2> => {
+  const requestId = event.requestContext.requestId;
+
   try {
     const user = getAuthUser(event);
     console.log("Delete item by user:", user.userId);
@@ -14,7 +16,10 @@ export const handler = async (
     const id = event.pathParameters?.id;
 
     if (!id) {
-      return json(400, { error: "id is required" });
+      return errorJson(400, "id is required", {
+        details: "Path parameter 'id' is missing",
+        requestId,
+      });
     }
 
     const supabase = getSupabaseClient();
@@ -27,16 +32,22 @@ export const handler = async (
 
     if (error) {
       console.error("Supabase delete error", error);
-      return json(500, { error: "Failed to delete item" });
+      return errorJson(500, "Failed to delete item", {
+        details: `${error.code ?? "DB_ERROR"}: ${error.message}`,
+        requestId,
+      });
     }
 
     if (!data) {
-      return json(404, { error: "Item not found" });
+      return errorJson(404, "Item not found", {
+        details: `No item found for id '${id}'`,
+        requestId,
+      });
     }
 
     return noContent();
   } catch (error) {
-    return handleRouteError(error, "Failed to delete item");
+    return handleRouteError(error, "Failed to delete item", requestId);
   }
 };
 

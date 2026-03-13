@@ -1,12 +1,14 @@
 import type { APIGatewayProxyResultV2 } from "aws-lambda";
 import { getAuthUser } from "../lib/auth";
 import type { AuthorizedEvent } from "../lib/auth";
-import { handleRouteError, json } from "../lib/http";
+import { errorJson, handleRouteError, json } from "../lib/http";
 import { getSupabaseClient } from "../lib/supabase";
 
 export const handler = async (
   event: AuthorizedEvent
 ): Promise<APIGatewayProxyResultV2> => {
+  const requestId = event.requestContext.requestId;
+
   try {
     const user = getAuthUser(event);
     console.log("Update item by user:", user.userId);
@@ -14,13 +16,20 @@ export const handler = async (
     const id = event.pathParameters?.id;
 
     if (!id) {
-      return json(400, { error: "id is required" });
+      return errorJson(400, "id is required", {
+        details: "Path parameter 'id' is missing",
+        requestId,
+      });
     }
+
     let body: { name?: string; description?: string };
     try {
       body = JSON.parse(event.body || "{}");
     } catch {
-      return json(400, { error: "Invalid JSON body" });
+      return errorJson(400, "Invalid JSON body", {
+        details: "Request body must be valid JSON",
+        requestId,
+      });
     }
 
     const updates: { name?: string; description?: string; updated_at: string } = {
@@ -29,7 +38,10 @@ export const handler = async (
 
     if (body.name !== undefined) {
       if (!body.name.trim()) {
-        return json(400, { error: "name cannot be empty" });
+        return errorJson(400, "name cannot be empty", {
+          details: "If provided, 'name' must contain non-whitespace characters",
+          requestId,
+        });
       }
       updates.name = body.name.trim();
     }
@@ -39,7 +51,10 @@ export const handler = async (
     }
 
     if (body.name === undefined && body.description === undefined) {
-      return json(400, { error: "Provide name or description to update" });
+      return errorJson(400, "Provide name or description to update", {
+        details: "Body must include at least one of: name, description",
+        requestId,
+      });
     }
 
     const supabase = getSupabaseClient();
@@ -52,16 +67,22 @@ export const handler = async (
 
     if (error) {
       console.error("Supabase update error", error);
-      return json(500, { error: "Failed to update item" });
+      return errorJson(500, "Failed to update item", {
+        details: `${error.code ?? "DB_ERROR"}: ${error.message}`,
+        requestId,
+      });
     }
 
     if (!data) {
-      return json(404, { error: "Item not found" });
+      return errorJson(404, "Item not found", {
+        details: `No item found for id '${id}'`,
+        requestId,
+      });
     }
 
     return json(200, data);
   } catch (error) {
-    return handleRouteError(error, "Failed to update item");
+    return handleRouteError(error, "Failed to update item", requestId);
   }
 };
 

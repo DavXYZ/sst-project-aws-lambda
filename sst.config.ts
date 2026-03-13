@@ -34,44 +34,47 @@ export default $config({
             SUPABASE_SERVICE_ROLE_KEY: supabaseServiceRoleKey,
           },
         },
-        ttl: "5 minutes",
+        ttl: "0 seconds",
       },
     });
 
     const routeArgs = {
-      environment: {
-        SUPABASE_URL: supabaseUrl,
-        SUPABASE_SERVICE_ROLE_KEY: supabaseServiceRoleKey,
-      },
       auth: {
         lambda: authorizer.id,
       },
     };
 
+    const functionEnv = {
+      environment: {
+        SUPABASE_URL: supabaseUrl,
+        SUPABASE_SERVICE_ROLE_KEY: supabaseServiceRoleKey,
+      },
+    };
+
     api.route("POST /items", {
-      ...routeArgs,
       handler: "src/lambdas/create.handler",
-    });
+      ...functionEnv,
+    }, routeArgs);
 
     api.route("GET /items", {
-      ...routeArgs,
       handler: "src/lambdas/getAll.handler",
-    });
+      ...functionEnv,
+    }, routeArgs);
 
     api.route("GET /items/{id}", {
-      ...routeArgs,
       handler: "src/lambdas/getById.handler",
-    });
+      ...functionEnv,
+    }, routeArgs);
 
     api.route("PUT /items/{id}", {
-      ...routeArgs,
       handler: "src/lambdas/update.handler",
-    });
+      ...functionEnv,
+    }, routeArgs);
 
     api.route("DELETE /items/{id}", {
-      ...routeArgs,
       handler: "src/lambdas/delete.handler",
-    });
+      ...functionEnv,
+    }, routeArgs);
 
     const web = new sst.aws.StaticSite("web", {
       path: "web",

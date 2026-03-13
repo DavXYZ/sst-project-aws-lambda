@@ -24,13 +24,13 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    environment: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.stage || github.ref == 'refs/heads/main' && 'production' || 'dev' }}
+    environment: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.stage || github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/develop' && 'staging' || 'staging' }}
     concurrency:
-      group: sstproject-deploy-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.stage || github.ref == 'refs/heads/main' && 'production' || 'dev' }}
+      group: sstproject-deploy-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.stage || github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/develop' && 'staging' || 'staging' }}
       cancel-in-progress: false
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-      STAGE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.stage || github.ref == 'refs/heads/main' && 'production' || 'dev' }}
+      STAGE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.stage || github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/develop' && 'staging' || 'staging' }}
       AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
     steps:
       - name: Checkout code
@@ -103,7 +103,14 @@ jobs:
             exit 0
           fi
 
-          echo "SST deploy failed for a reason other than a lock. See log above."
+          if grep -q "NoSuchDistribution" "$LOG_FILE"; then
+            echo "Detected stale CloudFront reference in SST state. Running sst refresh to reconcile state with AWS and retrying..."
+            npx sst refresh --stage "${{ steps.stage.outputs.stage }}"
+            npx sst deploy --stage "${{ steps.stage.outputs.stage }}" --print-logs
+            exit 0
+          fi
+
+          echo "SST deploy failed. See log above."
           exit 1
         env:
           SST_LOG: debug
